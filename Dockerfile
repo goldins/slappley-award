@@ -1,12 +1,8 @@
 FROM golang:1.9
 
-RUN go get github.com/tools/godep
-RUN go get github.com/kelseyhightower/envconfig
-
 ADD . /go/src/github.com/goldins/slappley-award
 
-RUN cd /go/src/github.com/goldins/slappley-award && RUN godep go install
+RUN go install github.com/goldins/slappley-award/cmd/science
 
-CMD ["/go/bin/slappley"]
+CMD ["/go/bin/science"]
 
-EXPOSE 8000

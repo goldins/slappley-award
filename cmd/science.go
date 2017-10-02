@@ -8,7 +8,9 @@ import (
 	"log"
 	"math/rand"
 	"time"
-    "encoding/base64"
+	"encoding/base64"
+	"net/url"
+	"os"
 )
 
 const BASE_URL = "https://masterofallscience.com/"
@@ -16,12 +18,39 @@ const SEARCH_URL = BASE_URL + "api/search?q=%s"
 const CAPTION_URL = BASE_URL + "api/caption?e=%s&t=%d"
 const IMAGE_URL = BASE_URL + "meme/%s/%d.jpg?b64lines=%s" // Episode/Timestamp.jpg?b64lines=base64encoded
 
+type ActionValue struct {
+	Url     string `json:"url"`
+	Text    string `json:"text"`
+	Args    string `json:"args"`
+	Command string `json:"command"`
+}
+
+type Action struct {
+	Name  string      `json:"name"`
+	Text  string      `json:"text"`
+	Type  string      `json:"type"`
+	Style string      `json:"style"`
+	Value ActionValue `json:"value"`
+}
+
+type Attachment struct {
+	Title    string   `json:"title"`
+	ImageUrl string   `json:"image_url"`
+	Actions  []Action `json:"actions"`
+	/**
+
+
+	 */
+}
+
 // todo: move to a lib?
 type SlackMessage struct {
-	Text     string `json:"text"`
-	Username string `json:"username"`
-	Channel  string `json:"channel"`
-	Icon     string `json:"icon_emoji"`
+	ResponseType string       `json:"response_type"`
+	Text         string       `json:"text"`
+	Username     string       `json:"username"`
+	Channel      string       `json:"channel"`
+	Icon         string       `json:"icon_emoji"`
+	Attachments  []Attachment `json:"attachments"`
 }
 
 // https://masterofallscience.com/api/caption?e=S01E09&t=40165
@@ -57,8 +86,8 @@ type Frame struct {
 }
 
 type CaptionResponse struct {
-	Episode  Episode
-	Frame    Frame
+	Episode   Episode
+	Frame     Frame
 	Subtitles []Subtitle // <-- this here
 }
 
@@ -84,7 +113,14 @@ func ScienceHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
-		query := r.PostFormValue("text")
+		token := os.Getenv("SCIENCE_TOKEN")
+		if token != r.PostFormValue("token") {
+			log.Printf("%s", r.PostFormValue("token"))
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+			return
+		}
+
+		query := url.QueryEscape(r.PostFormValue("text"))
 		// user := r.PostFormValue("user_name")
 		// channel := r.PostFormValue("channel_name")
 		channelId := r.PostFormValue("channel_id")
@@ -92,17 +128,43 @@ func ScienceHandler() http.HandlerFunc {
 		randomItem := getSearchResult(query)
 		captionText := getCaptionResult(randomItem)
 		imageUrl := getImage(randomItem, captionText)
-		log.Printf("%s", imageUrl)
+		// log.Printf("%s", imageUrl)
+
+		/*
+		v := ActionValue{
+			Text: "Send",
+			Url: imageUrl,
+			Args: query,
+			Command: "science",
+		}*/
+
+		a := Attachment{
+			ImageUrl: imageUrl,
+			/*Actions: []Action{{
+				Name:  "send",
+				Text:  "Send",
+				Type:  "button",
+				Style: "good",
+				Value: v,
+			}}.*/
+		}
 
 		m := SlackMessage{
-			Text:     fmt.Sprintf("%s", imageUrl),
-			Username: "sciencebot",
-			Channel:  channelId,
-			Icon:     ":d20:",
+			ResponseType: "in_channel",
+			Text:         captionText,
+			Username:     "sciencebot",
+			Channel:      channelId,
+			Icon:         ":d20:",
+			Attachments:  []Attachment{a},
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		fmt.Fprintf(w, string(m.Text))
+		b, err := json.Marshal(m)
+		if err != nil {
+			return
+		}
+		log.Print(string(b))
+		fmt.Fprintf(w, string(b))
 	}
 }
 
@@ -124,7 +186,6 @@ func getCaptionResult(item SearchResponse) string {
 }
 
 func getImage(item SearchResponse, text string) string {
-	encoded, err := base64.StdEncoding.DecodeString(text)
-	log.Printf("%s", err)
+	encoded := base64.StdEncoding.EncodeToString([]byte(text))
 	return fmt.Sprintf(IMAGE_URL, item.Episode, item.Timestamp, string(encoded))
 }

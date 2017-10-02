@@ -1,4 +1,3 @@
-// http://guzalexander.com/2017/09/15/cowsay-slack-command.html
 package cmd
 
 import (
@@ -37,10 +36,6 @@ type Attachment struct {
 	Title    string   `json:"title"`
 	ImageUrl string   `json:"image_url"`
 	Actions  []Action `json:"actions"`
-	/**
-
-
-	 */
 }
 
 // todo: move to a lib?
@@ -53,7 +48,6 @@ type SlackMessage struct {
 	Attachments  []Attachment `json:"attachments"`
 }
 
-// https://masterofallscience.com/api/caption?e=S01E09&t=40165
 type Episode struct {
 	Id              int
 	Key             string
@@ -64,9 +58,6 @@ type Episode struct {
 	Writer          string
 	OriginalAirDate string
 	WikiLink        string
-	/**
-	{"Id":10,"Key":"S01E09","Season":1,"EpisodeNumber":9,"Title":"Something Ricked This Way Comes","Director":"John Rice","Writer":"Mike McMahan","OriginalAirDate":"24-Mar-14","WikiLink":""}
-	 */
 }
 
 type Subtitle struct {
@@ -75,7 +66,7 @@ type Subtitle struct {
 	Episode                 string
 	StartTimestamp          int
 	EndTimestamp            int
-	Content                 string // <-- need this
+	Content                 string
 	Language                string
 }
 
@@ -88,7 +79,7 @@ type Frame struct {
 type CaptionResponse struct {
 	Episode   Episode
 	Frame     Frame
-	Subtitles []Subtitle // <-- this here
+	Subtitles []Subtitle
 }
 
 type SearchResponse struct {
@@ -128,25 +119,9 @@ func ScienceHandler() http.HandlerFunc {
 		randomItem := getSearchResult(query)
 		captionText := getCaptionResult(randomItem)
 		imageUrl := getImage(randomItem, captionText)
-		// log.Printf("%s", imageUrl)
-
-		/*
-		v := ActionValue{
-			Text: "Send",
-			Url: imageUrl,
-			Args: query,
-			Command: "science",
-		}*/
 
 		a := Attachment{
 			ImageUrl: imageUrl,
-			/*Actions: []Action{{
-				Name:  "send",
-				Text:  "Send",
-				Type:  "button",
-				Style: "good",
-				Value: v,
-			}}.*/
 		}
 
 		m := SlackMessage{

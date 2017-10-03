@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/goldins/slappley-award/cmd"
 	"os"
 	"net/http"
 	"log"
-	"github.com/goldins/slappley-award/cmd"
+	"fmt"
 )
 
 var (
@@ -17,11 +18,12 @@ type Config struct {
 	token string
 }
 
+const SLACK_TOKEN = "SCIENCE_TOKEN"
 
 func init() {
-	token = os.Getenv("SCIENCE_TOKEN")
+	token = os.Getenv(SLACK_TOKEN)
 	if "" == token {
-		panic("SCIENCE_TOKEN is not set!")
+		panic(fmt.Sprintf("%s is not set!", SLACK_TOKEN))
 	}
 
 	if "" != os.Getenv("PORT") {

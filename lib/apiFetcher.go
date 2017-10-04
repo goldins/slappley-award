@@ -16,6 +16,36 @@ import (
 var _config *Config
 var _channelId string
 
+func SendHandler(config *Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// log.Print(config)
+		// log.Print(r.Body)
+		// actions := r.PostFormValue("attachments")
+		payload := r.PostFormValue("payload")
+		var a Attachment
+		json.Unmarshal([]byte(payload), &a)
+		var av ActionValue
+		json.Unmarshal([]byte(a.Actions[0].Value), av)
+
+		log.Print(av)
+		log.Print(a.Actions[0].Value)
+
+		newAttachment := Attachment{
+			ImageUrl: av.Url,
+		}
+
+		m := SlackMessage{
+			ResponseType: "in_channel",
+			Text: 	      a.Actions[0].Text,
+			Username:     _config.username,
+			Channel:      _channelId,
+			Icon:         ":d20:",
+			Attachments: []Attachment{newAttachment},
+		}
+		handleReturn(w, m)
+	}
+}
+
 func FetchHandler(config *Config) http.HandlerFunc {
 	_config = config;
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -23,13 +53,13 @@ func FetchHandler(config *Config) http.HandlerFunc {
 
 		token := os.Getenv("SCIENCE_TOKEN")
 		if token != r.PostFormValue("token") {
-			log.Printf("%s", r.PostFormValue("token"))
+			// log.Printf("%s", r.PostFormValue("token"))
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		query := url.QueryEscape(r.PostFormValue("text"))
-		log.Printf(query)
+		// log.Printf(query)
 		// user := r.PostFormValue("user_name")
 		// channel := r.PostFormValue("channel_name")
 		_channelId := r.PostFormValue("channel_id")
@@ -52,24 +82,33 @@ func FetchHandler(config *Config) http.HandlerFunc {
 			return
 		}
 
+		av := ActionValue{
+			Url: imageUrl,
+			Text: captionText,
+			Args: captionText,
+			Command: _config.command,
+		}
+
+		avm, err := json.Marshal(av)
+		if err != nil {
+			handleReturn(w, makeErrorMessage(err))
+			return
+		}
+
 		message := SlackMessage{
-			ResponseType: "in_channel",
 			Text:         captionText,
 			Username:     _config.username,
 			Channel:      _channelId,
 			Icon:         ":d20:",
 			Attachments: []Attachment{{
 				ImageUrl: imageUrl,
+				CallbackId: _config.command + "_callback",
 				Actions: []Action{{
-					Name: "cancel",
-					Text: "Cancel",
+					Name: "send",
+					Text: "Send",
 					Type: "button",
-					/*
-					Value: ActionValue{
-						Url: "",
-						Text: "Cancel",
-						Args:
-					},*/
+					Style: "good",
+					Value: string(avm),
 				}},
 			}},
 		}
@@ -89,7 +128,7 @@ func getSearchResult(q string) (SearchResponse, error) {
 	getJson(searchUrl, &searchJson)
 	// pick a random item from 0 to length
 	numResults := len(searchJson)
-	log.Printf("numResults for %s: %d", q, numResults)
+	// log.Printf("numResults for %s: %d", q, numResults)
 	if numResults > 0 {
 		return searchJson[rand.Intn(numResults-1)], nil
 	}
@@ -101,7 +140,7 @@ func getSearchResult(q string) (SearchResponse, error) {
  */
 func getCaptionResult(item SearchResponse) (string, error) {
 	captionUrl := fmt.Sprintf(_config.captionUrl, item.Episode, item.Timestamp)
-	log.Printf("%s", captionUrl)
+	// log.Printf("%s", captionUrl)
 	var captionJson CaptionResponse
 	err := getJson(captionUrl, &captionJson)
 	if err != nil {
@@ -116,7 +155,7 @@ func getCaptionResult(item SearchResponse) (string, error) {
 func getCaptionedImage(item SearchResponse, text string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString([]byte(text))
 	encoded = strings.Replace(encoded, "/", "_", -1)
-	log.Print(encoded)
+	// log.Print(encoded)
 	if false {
 		return "", errors.New("error getting image")
 	}
@@ -137,11 +176,11 @@ func handleReturn(w http.ResponseWriter, message SlackMessage) error {
 	w.Header().Add("Content-Type", "application/json")
 	marshalled, err := json.Marshal(message)
 	if err != nil {
-		log.Print(marshalled)
-		log.Print(err)
+		// log.Print(marshalled)
+		// log.Print(err)
 		fmt.Fprintf(w, string(marshalled))
 	}
-	log.Print(string(marshalled))
+	// log.Print(string(marshalled))
 	fmt.Fprintf(w, string(marshalled))
 	return nil
 }

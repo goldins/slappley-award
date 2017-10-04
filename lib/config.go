@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	command           string
 	username          string
 	searchUrl         string
 	captionUrl        string
@@ -15,8 +16,9 @@ type Config struct {
 
 var myClient = &http.Client{Timeout: 10 * time.Second}
 
-func NewConfig(username string, searchUrl string, captionUrl string, captionedImageUrl string) *Config {
+func NewConfig(command string, username string, searchUrl string, captionUrl string, captionedImageUrl string) *Config {
 	return &Config{
+		command:           command,
 		username:          username,
 		searchUrl:         searchUrl,
 		captionUrl:        captionUrl,

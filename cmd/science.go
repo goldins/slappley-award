@@ -5,12 +5,16 @@ import (
 	"net/http"
 )
 
+const USERNAME = "sciencebot"
 const BASE_URL = "https://masterofallscience.com/"
 const SEARCH_URL = BASE_URL + "api/search?q=%s"
 const CAPTION_URL = BASE_URL + "api/caption?e=%s&t=%d"
-const IMAGE_URL = BASE_URL + "meme/%s/%d.jpg?b64lines=%s" // Episode/Timestamp.jpg?b64lines=base64encoded
+
+// e.g. meme/episode/timestamp.jpg?b64lines=base64encodedCaptionText
+// note: no `api` prefix.
+const CAPTIONED_IMAGE_URL = BASE_URL + "meme/%s/%d.jpg?b64lines=%s"
 
 func ScienceHandler() http.HandlerFunc {
-	config := lib.NewConfig(SEARCH_URL, CAPTION_URL, IMAGE_URL)
+	config := lib.NewConfig(USERNAME, SEARCH_URL, CAPTION_URL, CAPTIONED_IMAGE_URL)
 	return lib.FetchHandler(config)
 }

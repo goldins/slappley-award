@@ -39,4 +39,3 @@ type SearchResponse struct {
 	Episode   string
 	Timestamp int
 }
-

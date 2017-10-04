@@ -60,17 +60,17 @@ func FetchHandler(config *Config) http.HandlerFunc {
 			Icon:         ":d20:",
 			Attachments: []Attachment{{
 				ImageUrl: imageUrl,
-				Actions: []Action{{
+				/*Actions: []Action{{
 					Name: "cancel",
 					Text: "Cancel",
 					Type: "button",
-					/*
 					Value: ActionValue{
 						Url: "",
 						Text: "Cancel",
 						Args:
-					},*/
+					},
 				}},
+				*/
 			}},
 		}
 

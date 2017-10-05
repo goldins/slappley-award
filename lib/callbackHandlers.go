@@ -33,14 +33,13 @@ func shuffleAction(w http.ResponseWriter, value ActionValue) {
 
 func sendHandler(w http.ResponseWriter, value ActionValue) {
 	newAttachment := Attachment{
-		Title:    value.Text,
 		ImageUrl: value.Url,
 		Color:    _config.messageColor,
 	}
 
 	m := SlackMessage{
 		ResponseType: "in_channel",
-		Text:         "",
+		Text:         value.Text,
 		Username:     _config.username,
 		Channel:      _channelId,
 		Icon:         ":d20:",

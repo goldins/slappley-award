@@ -16,20 +16,44 @@ import (
 var _config *Config
 var _channelId string
 
+func SendHandler(config *Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		payload := r.PostFormValue("payload")
+		var a Attachment
+		json.Unmarshal([]byte(payload), &a)
+		var actionValue ActionValue
+		json.Unmarshal([]byte(a.Actions[0].Value), &actionValue)
+
+		newAttachment := Attachment{
+			Title:    actionValue.Text,
+			ImageUrl: actionValue.Url,
+		}
+
+		m := SlackMessage{
+			ResponseType: "in_channel",
+			Text:         a.Actions[0].Text,
+			Username:     _config.username,
+			Channel:      _channelId,
+			Icon:         ":d20:",
+			Attachments:  []Attachment{newAttachment},
+		}
+		handleReturn(w, m)
+	}
+}
+
 func FetchHandler(config *Config) http.HandlerFunc {
-	_config = config;
+	_config = config
 	return func(w http.ResponseWriter, r *http.Request) {
 		r.ParseForm()
 
 		token := os.Getenv("SCIENCE_TOKEN")
 		if token != r.PostFormValue("token") {
-			log.Printf("%s", r.PostFormValue("token"))
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
 
 		query := url.QueryEscape(r.PostFormValue("text"))
-		log.Printf(query)
+		log.Printf("Got request for %s from %s", query, r.PostFormValue("user_name"))
 		// user := r.PostFormValue("user_name")
 		// channel := r.PostFormValue("channel_name")
 		_channelId := r.PostFormValue("channel_id")
@@ -52,25 +76,34 @@ func FetchHandler(config *Config) http.HandlerFunc {
 			return
 		}
 
+		av := ActionValue{
+			Url:     imageUrl,
+			Text:    captionText,
+			Args:    captionText,
+			Command: _config.command,
+		}
+
+		avm, err := json.Marshal(av)
+		if err != nil {
+			handleReturn(w, makeErrorMessage(err))
+			return
+		}
+
 		message := SlackMessage{
-			ResponseType: "in_channel",
-			Text:         captionText,
+			ResponseType: "ephemeral",
 			Username:     _config.username,
 			Channel:      _channelId,
 			Icon:         ":d20:",
 			Attachments: []Attachment{{
-				ImageUrl: imageUrl,
-				/*Actions: []Action{{
-					Name: "cancel",
-					Text: "Cancel",
-					Type: "button",
-					Value: ActionValue{
-						Url: "",
-						Text: "Cancel",
-						Args:
-					},
+				ImageUrl:   imageUrl,
+				CallbackId: _config.command + "_callback",
+				Actions: []Action{{
+					Name:  "send",
+					Text:  "Send",
+					Type:  "button",
+					Style: "good",
+					Value: string(avm),
 				}},
-				*/
 			}},
 		}
 
@@ -88,8 +121,8 @@ func getSearchResult(q string) (SearchResponse, error) {
 	var searchJson []SearchResponse
 	getJson(searchUrl, &searchJson)
 	// pick a random item from 0 to length
+	// todo: start with the first and add shuffle
 	numResults := len(searchJson)
-	log.Printf("numResults for %s: %d", q, numResults)
 	if numResults > 0 {
 		return searchJson[rand.Intn(numResults-1)], nil
 	}
@@ -101,13 +134,14 @@ func getSearchResult(q string) (SearchResponse, error) {
  */
 func getCaptionResult(item SearchResponse) (string, error) {
 	captionUrl := fmt.Sprintf(_config.captionUrl, item.Episode, item.Timestamp)
-	log.Printf("%s", captionUrl)
 	var captionJson CaptionResponse
 	err := getJson(captionUrl, &captionJson)
 	if err != nil {
 		return "", err
 	}
-	return captionJson.Subtitles[0].Content, nil
+	subtitles := captionJson.Subtitles
+	// todo: return collection of Content strings
+	return subtitles[0].Content, nil
 }
 
 /*
@@ -116,10 +150,6 @@ func getCaptionResult(item SearchResponse) (string, error) {
 func getCaptionedImage(item SearchResponse, text string) (string, error) {
 	encoded := base64.StdEncoding.EncodeToString([]byte(text))
 	encoded = strings.Replace(encoded, "/", "_", -1)
-	log.Print(encoded)
-	if false {
-		return "", errors.New("error getting image")
-	}
 	return fmt.Sprintf(_config.captionedImageUrl, item.Episode, item.Timestamp, string(encoded)), nil
 }
 
@@ -137,9 +167,8 @@ func handleReturn(w http.ResponseWriter, message SlackMessage) error {
 	w.Header().Add("Content-Type", "application/json")
 	marshalled, err := json.Marshal(message)
 	if err != nil {
-		log.Print(marshalled)
-		log.Print(err)
 		fmt.Fprintf(w, string(marshalled))
+		return err
 	}
 	log.Print(string(marshalled))
 	fmt.Fprintf(w, string(marshalled))

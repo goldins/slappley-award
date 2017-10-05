@@ -33,6 +33,6 @@ func init() {
 
 func main() {
 	http.HandleFunc("/science", cmd.ScienceHandler())
-	http.HandleFunc("/action", cmd.SendHandler())
+	http.HandleFunc("/action", cmd.ActionHandler())
 	log.Fatalln(http.ListenAndServe(":"+port, nil))
 }

@@ -8,11 +8,19 @@ type ActionValue struct {
 }
 
 type Action struct {
-	Name  string `json:"name"`
-	Text  string `json:"text"`
-	Type  string `json:"type"`
-	Style string `json:"style"`
-	Value string `json:"value"`
+	Name  string      `json:"name"`
+	Text  string      `json:"text"`
+	Type  string      `json:"type"`
+	Style string      `json:"style"`
+	Value string `json:"value"` // JSONified representation of ActionValue
+}
+
+type ReturnedAction struct {
+	Name  string      `json:"name"`
+	Text  string      `json:"text"`
+	Type  string      `json:"type"`
+	Style string      `json:"style"`
+	Value ActionValue `json:"value"`
 }
 
 type CancelAction struct {

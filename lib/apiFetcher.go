@@ -153,7 +153,7 @@ func getActions(w http.ResponseWriter, imageUrl string, captionText string) ([]A
 		Url:     imageUrl,
 		Text:    captionText,
 		Command: _config.command,
-		Args:    "send",
+		Args: "send",
 	}
 
 	sendActionValueJSON, err := json.Marshal(sendActionValue)
@@ -166,7 +166,7 @@ func getActions(w http.ResponseWriter, imageUrl string, captionText string) ([]A
 		Url:     imageUrl,
 		Text:    captionText,
 		Command: _config.command,
-		Args:    "cancel",
+		Args: "cancel",
 	}
 
 	cancelActionValueJSON, err := json.Marshal(cancelActionValue)
@@ -182,8 +182,8 @@ func getActions(w http.ResponseWriter, imageUrl string, captionText string) ([]A
 		Style: "primary",
 		Value: string(sendActionValueJSON),
 	}, {
-		Name:  "cancel",
-		Text:  "Cancel",
+		Name: "cancel",
+		Text: "Cancel",
 		Type:  "button",
 		Style: "danger",
 		Value: string(cancelActionValueJSON),

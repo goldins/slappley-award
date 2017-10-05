@@ -14,13 +14,13 @@ const CAPTION_URL = BASE_URL + "api/caption?e=%s&t=%d"
 // e.g. meme/episode/timestamp.jpg?b64lines=base64encodedCaptionText
 // note: no `api` prefix.
 const CAPTIONED_IMAGE_URL = BASE_URL + "meme/%s/%d.jpg?b64lines=%s"
+const MESSAGE_COLOR = "#A1D6F0"
 
 func ScienceHandler() http.HandlerFunc {
-	config := lib.NewConfig(COMMAND, USERNAME, SEARCH_URL, CAPTION_URL, CAPTIONED_IMAGE_URL)
+	config := lib.NewConfig(COMMAND, USERNAME, SEARCH_URL, CAPTION_URL, CAPTIONED_IMAGE_URL, MESSAGE_COLOR)
 	return lib.FetchHandler(config)
 }
 
-func SendHandler() http.HandlerFunc {
-	config := lib.NewConfig(COMMAND, USERNAME, SEARCH_URL, CAPTION_URL, CAPTIONED_IMAGE_URL)
-	return lib.SendHandler(config)
+func ActionHandler() http.HandlerFunc {
+	return lib.CallbackHandler()
 }

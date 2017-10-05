@@ -35,6 +35,7 @@ type Attachment struct {
 	Title      string   `json:"title"`
 	ImageUrl   string   `json:"image_url"`
 	CallbackId string   `json:"callback_id"`
+	Color 	   string 	`json:"color"`
 	Actions    []Action `json:"actions"`
 }
 

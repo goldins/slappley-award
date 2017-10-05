@@ -16,34 +16,10 @@ import (
 var _config *Config
 var _channelId string
 
-func SendHandler(config *Config) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		payload := r.PostFormValue("payload")
-		var a Attachment
-		json.Unmarshal([]byte(payload), &a)
-		var actionValue ActionValue
-		json.Unmarshal([]byte(a.Actions[0].Value), &actionValue)
-
-		newAttachment := Attachment{
-			Title:    actionValue.Text,
-			ImageUrl: actionValue.Url,
-		}
-
-		m := SlackMessage{
-			ResponseType: "in_channel",
-			Text:         a.Actions[0].Text,
-			Username:     _config.username,
-			Channel:      _channelId,
-			Icon:         ":d20:",
-			Attachments:  []Attachment{newAttachment},
-		}
-		handleReturn(w, m)
-	}
-}
-
 func FetchHandler(config *Config) http.HandlerFunc {
 	_config = config
 	return func(w http.ResponseWriter, r *http.Request) {
+		// todo: refactor for shuffleAction... umm... add caching?
 		r.ParseForm()
 
 		token := os.Getenv("SCIENCE_TOKEN")
@@ -76,14 +52,7 @@ func FetchHandler(config *Config) http.HandlerFunc {
 			return
 		}
 
-		av := ActionValue{
-			Url:     imageUrl,
-			Text:    captionText,
-			Args:    captionText,
-			Command: _config.command,
-		}
-
-		avm, err := json.Marshal(av)
+		actions, err := getActions(w, imageUrl, captionText)
 		if err != nil {
 			handleReturn(w, makeErrorMessage(err))
 			return
@@ -97,13 +66,7 @@ func FetchHandler(config *Config) http.HandlerFunc {
 			Attachments: []Attachment{{
 				ImageUrl:   imageUrl,
 				CallbackId: _config.command + "_callback",
-				Actions: []Action{{
-					Name:  "send",
-					Text:  "Send",
-					Type:  "button",
-					Style: "good",
-					Value: string(avm),
-				}},
+				Actions:    actions,
 			}},
 		}
 
@@ -182,4 +145,48 @@ func makeErrorMessage(err error) SlackMessage {
 		Channel:  _channelId,
 		Icon:     ":d20:",
 	}
+}
+
+func getActions(w http.ResponseWriter, imageUrl string, captionText string) ([]Action, error) {
+
+	sendActionValue := ActionValue{
+		Url:     imageUrl,
+		Text:    captionText,
+		Command: _config.command,
+		Args:    "send",
+	}
+
+	sendActionValueJSON, err := json.Marshal(sendActionValue)
+	if err != nil {
+		handleReturn(w, makeErrorMessage(err))
+		return []Action{}, err
+	}
+
+	cancelActionValue := ActionValue{
+		Url:     imageUrl,
+		Text:    captionText,
+		Command: _config.command,
+		Args:    "cancel",
+	}
+
+	cancelActionValueJSON, err := json.Marshal(cancelActionValue)
+	if err != nil {
+		handleReturn(w, makeErrorMessage(err))
+		return []Action{}, err
+	}
+
+	return []Action{{
+		Name:  "send",
+		Text:  "Send",
+		Type:  "button",
+		Style: "primary",
+		Value: string(sendActionValueJSON),
+	}, {
+		Name:  "cancel",
+		Text:  "Cancel",
+		Type:  "button",
+		Style: "danger",
+		Value: string(cancelActionValueJSON),
+	}}, nil
+
 }

@@ -6,7 +6,7 @@ import (
 )
 
 const COMMAND = "science"
-const USERNAME = "sciencebot"
+const USERNAME = "slackofallscience"
 const BASE_URL = "https://masterofallscience.com/"
 const SEARCH_URL = BASE_URL + "api/search?q=%s"
 const CAPTION_URL = BASE_URL + "api/caption?e=%s&t=%d"
@@ -22,5 +22,6 @@ func ScienceHandler() http.HandlerFunc {
 }
 
 func ActionHandler() http.HandlerFunc {
-	return lib.CallbackHandler()
+	config := lib.NewConfig(COMMAND, USERNAME, SEARCH_URL, CAPTION_URL, CAPTIONED_IMAGE_URL, MESSAGE_COLOR)
+	return lib.CallbackHandler(config)
 }

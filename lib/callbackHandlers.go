@@ -4,57 +4,79 @@ import (
 	"net/http"
 	"encoding/json"
 	"log"
+	"strings"
 )
 
-func CallbackHandler() http.HandlerFunc {
+func CallbackHandler(config *Config) http.HandlerFunc {
+	_config = config
 	return func(w http.ResponseWriter, r *http.Request) {
 		payload := r.PostFormValue("payload")
-		var origAttachment Attachment
-		json.Unmarshal([]byte(payload), &origAttachment)
+		var response CallbackResponse
+		json.Unmarshal([]byte(payload), &response)
 		var actionValue ActionValue
-		json.Unmarshal([]byte(origAttachment.Actions[0].Value), &actionValue)
+		json.Unmarshal([]byte(response.Actions[0].Value), &actionValue)
 
 		switch actionValue.Args {
 		case "send":
-			sendHandler(w, actionValue)
+			sendHandler(w, actionValue, response)
 		case "cancel":
-			cancelHandler(w, actionValue)
+			cancelHandler(w, actionValue, response)
 		case "shuffle":
-			shuffleAction(w, actionValue)
+			shuffleAction(w, actionValue, response)
 		default:
 			log.Panic("invalid action " + actionValue.Args)
 		}
 	}
 }
 
-func shuffleAction(w http.ResponseWriter, value ActionValue) {
+func shuffleAction(w http.ResponseWriter, value ActionValue, payload CallbackResponse) {
 	// todo: refactor FetchHandler to reuse most of its logic
 }
 
-func sendHandler(w http.ResponseWriter, value ActionValue) {
+func sendHandler(w http.ResponseWriter, value ActionValue, payload CallbackResponse) {
+	updateMessage(w, "sent")
 	newAttachment := Attachment{
 		ImageUrl: value.Url,
 		Color:    _config.messageColor,
 	}
 
-	m := SlackMessage{
-		ResponseType: "in_channel",
-		Text:         value.Text,
-		Username:     _config.username,
-		Channel:      _channelId,
-		Icon:         ":d20:",
-		Attachments:  []Attachment{newAttachment},
+	newM := SlackMessage{
+		ResponseType:    "in_channel",
+		Text:            value.Text,
+		Username:        _config.username,
+		Channel:         _channelId,
+		Attachments:     []Attachment{newAttachment},
+		ReplaceOriginal: false,
 	}
-	handleReturn(w, m)
+
+	marshalled, err := json.Marshal(newM)
+	if err != nil {
+		log.Panic(err)
+		return
+	}
+
+	r, err := myClient.Post(
+		payload.ResponseUrl,
+		"application/json",
+		strings.NewReader(string(marshalled)),
+	)
+
+	r.Body.Close()
 }
 
-func cancelHandler(w http.ResponseWriter, value ActionValue) {
+func cancelHandler(w http.ResponseWriter, value ActionValue, payload CallbackResponse) {
+	updateMessage(w, "canceled")
+}
+
+func updateMessage(w http.ResponseWriter, action string) {
+	// Replace original response with "Canceled" text.
+	// Temporary until I figure out how to delete messages.
 	m := SlackMessage{
-		ResponseType: "ephemeral",
-		Text:         "Canceled",
-		Username:     _config.username,
-		Channel:      _channelId,
-		Icon:         ":d20:",
+		ResponseType:    "ephemeral",
+		Text:            action,
+		Username:        _config.username,
+		Channel:         _channelId,
+		ReplaceOriginal: true,
 	}
 	handleReturn(w, m)
 }

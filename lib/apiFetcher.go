@@ -22,8 +22,8 @@ func FetchHandler(config *Config) http.HandlerFunc {
 		// todo: refactor for shuffleAction... umm... add caching?
 		r.ParseForm()
 
-		token := os.Getenv("SCIENCE_TOKEN")
-		if token != r.PostFormValue("token") {
+		verifyToken := os.Getenv("SCIENCE_TOKEN")
+		if verifyToken != r.PostFormValue("token") {
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
